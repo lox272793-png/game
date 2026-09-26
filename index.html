@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Telegram Catch Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a1a;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(to bottom, #111, #222);
+            margin: 0 auto;
+        }
+        #scoreBoard {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="scoreBoard">Очки: <span id="score">0</span></div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreElement = document.getElementById("score");
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let score = 0;
+        let gameOver = false;
+
+        const player = {
+            x: canvas.width / 2 - 40,
+            y: canvas.height - 70,
+            width: 80,
+            height: 20,
+            color: "#248bcf"
+        };
+
+        const items = [];
+        const itemTypes = [
+            { color: "#4CAF50", points: 10, type: "coin" },
+            { color: "#F44336", points: -20, type: "bomb" }
+        ];
+
+        window.addEventListener("touchmove", (e) => {
+            if (gameOver) return;
+            const touchX = e.touches[0].clientX;
+            player.x = touchX - player.width / 2;
+            
+            if (player.x < 0) player.x = 0;
+            if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
+        });
+
+        function spawnItem() {
+            if (gameOver) return;
+            const type = itemTypes[Math.random() < 0.2 ? 1 : 0];
+            items.push({
+                x: Math.random() * (canvas.width - 20),
+                y: -20,
+                radius: 12,
+                speed: 3 + Math.random() * 4,
+                ...type
+            });
+            setTimeout(spawnItem, 1000 - Math.min(score * 5, 500));
+        }
+
+        function update() {
+            if (gameOver) return;
+
+            for (let i = items.length - 1; i >= 0; i--) {
+                const item = items[i];
+                item.y += item.speed;
+
+                if (item.y + item.radius >= player.y && 
+                    item.x >= player.x && 
+                    item.x <= player.x + player.width) {
+                    
+                    score += item.points;
+                    if (score < 0) score = 0;
+                    scoreElement.innerText = score;
+                    
+                    items.splice(i, 1);
+                    continue;
+                }
+
+                if (item.y - item.radius > canvas.height) {
+                    items.splice(i, 1);
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.roundRect(player.x, player.y, player.width, player.height, 10);
+            ctx.fill();
+
+            items.forEach(item => {
+                ctx.fillStyle = item.color;
+                ctx.beginPath();
+                ctx.arc(item.x, item.y, item.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        spawnItem();
+        gameLoop();
+    </script>
+</body>
+</html>
